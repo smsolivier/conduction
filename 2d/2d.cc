@@ -46,8 +46,8 @@ int main() {
 	// --- start program --- 
 
 
-	const int Nx = 40; 
-	const int Ny = 40; 
+	const int Nx = 20; 
+	const int Ny = 20; 
 	const int N = Nx * Ny; // number of elements 
 	const int Nt = 150; // number of time steps 
 	const double T0 = 0; 
@@ -67,7 +67,7 @@ int main() {
 
 	double xb = .1; 
 	double yb = .1; 
-	double tend = .0005; 
+	double tend = .005; 
 
 	vector<double> t = linspace(0, tend, Nt+1); 
 

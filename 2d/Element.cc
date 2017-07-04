@@ -10,15 +10,15 @@
 Element::Element(vector<double> &box, vector<int> &globalNodes, int p) :
 	globalNodes(globalNodes), p(p) {
 
-	N = 2*p; 
+	N = pow(p+1, 2); // number of nodes 
 
 	int int_order = 10; 
 
-	xglob = {box[0], box[1]}; 
-	yglob = {box[2], box[3]}; 
+	xglob = linspace(box[0], box[1], p+1); 
+	yglob = linspace(box[2], box[3], p+1); 
 
-	xloc = linspace(-1, 1, p); 
-	yloc = linspace(-1, 1, p); 
+	xloc = linspace(-1, 1, p+1); 
+	yloc = linspace(-1, 1, p+1); 
 
 	MatrixResize(pts, N, 2); 
 	MatrixResize(pts_global, N, 2); 
@@ -67,7 +67,7 @@ Element::Element(vector<double> &box, vector<int> &globalNodes, int p) :
 
 			B[i][j] = GaussQuad2D(func, int_order); 
 
-			if (isnan(B[i][j])) cout << "integration issue in Y" << endl; 
+			if (isnan(B[i][j])) cout << "integration issue in B" << endl; 
 
 		}
 
@@ -87,7 +87,7 @@ Element::Element(vector<double> &box, vector<int> &globalNodes, int p) :
 
 			C[i][j] = GaussQuad2D(func, int_order); 
 
-			if (isnan(C[i][j])) cout << "integration issue in Y" << endl; 
+			if (isnan(C[i][j])) cout << "integration issue in C" << endl; 
 
 		}
 
