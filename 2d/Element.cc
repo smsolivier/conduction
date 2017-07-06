@@ -7,10 +7,12 @@
 #include <cmath>
 #include <iostream>
 
-Element::Element(vector<double> &box, vector<int> &globalNodes, int p) :
-	globalNodes(globalNodes), p(p) {
+Element::Element(vector<double> &box, vector<int> &neighbors, int p) :
+	neighbors(neighbors), p(p) {
 
 	N = pow(p+1, 2); // number of nodes 
+
+	globalNodes.resize(N, -1); 
 
 	int int_order = 10; 
 
@@ -131,6 +133,231 @@ Element::Element(vector<double> &box, vector<int> &globalNodes, int p) :
 
 }
 
+void Element::setFace(int ind, vector<int> &nodes) {
+
+	// set face 0 
+	if (ind == 0) {
+
+		for (int i=0; i<nodes.size(); i++) {
+
+			int index = i; 
+
+			if (globalNodes[index] == -1) {
+
+				globalNodes[index] = nodes[i]; 
+
+			}
+
+		}
+
+	}
+
+	// set face 1 
+	else if (ind == 1) {
+
+		for (int i=0; i<p+1; i++) {
+
+			int index = i*(p+1); 
+
+			if (globalNodes[index] == -1) {
+
+				globalNodes[index] = nodes[i]; 
+
+			}
+
+		}
+
+	}
+
+	// set face 2 
+	else if (ind == 2) {
+
+		for (int i=0; i<p+1; i++) {
+
+			int index = p*(p+1)+i;
+
+			if (globalNodes[index] == -1) {
+
+				globalNodes[index] = nodes[i]; 
+
+			}
+
+		}
+
+	}
+
+	// set face 3 
+	else if (ind == 3) {
+
+		for (int i=0; i<p+1; i++) {
+
+			int index = p+i*(p+1);
+
+			if (globalNodes[index] == -1) {
+
+				globalNodes[index] = nodes[i]; 
+
+			}
+
+		}
+
+	}
+
+	else cout << "face not defined" << endl; 
+
+}
+
+void Element::setFace(int ind, int &count) {
+
+	// set face 0 
+	if (ind == 0) {
+
+		for (int i=0; i<p+1; i++) {
+
+			int index = i; 
+
+			if (globalNodes[index] == -1) {
+
+				globalNodes[index] = count;
+				count++; 
+
+			}
+
+		}
+
+	}
+
+	// set face 1 
+	else if (ind == 1) {
+
+		for (int i=0; i<p+1; i++) {
+
+			int index = i*(p+1); 
+
+			if (globalNodes[index] == -1) {
+
+				globalNodes[index] = count;
+				count++; 
+
+			}
+
+		}
+
+	}
+
+	// set face 2 
+	else if (ind == 2) {
+
+		for (int i=0; i<p+1; i++) {
+
+			int index = p*(p+1)+i;
+
+			if (globalNodes[index] == -1) {
+
+				globalNodes[index] = count;
+				count++; 
+
+			}
+
+		}
+
+	}
+
+	// set face 3 
+	else if (ind == 3) {
+
+		for (int i=0; i<p+1; i++) {
+
+			int index = p+i*(p+1);
+
+			if (globalNodes[index] == -1) {
+
+				globalNodes[index] = count;
+				count++; 
+
+			}
+
+		}
+
+	}
+
+	else cout << "face not defined" << endl; 
+
+}
+
+vector<int> Element::getFace(int ind) {
+
+	vector<int> mNode(p+1); 
+
+	// get face 0 
+	if (ind == 0) {
+
+		for (int i=0; i<p+1; i++) {
+
+			mNode[i] = globalNodes[i]; 
+
+		}
+
+	}
+
+	// get face 1 
+	else if (ind == 1) {
+
+		for (int i=0; i<p+1; i++) {
+
+			int index = i*(p+1);
+			mNode[i] = globalNodes[index]; 
+
+		}
+
+	}
+
+	// get face 2 
+	else if (ind == 2) {
+
+		for (int i=0; i<p+1; i++) {
+
+			int index = p*(p+1)+i; 
+			mNode[i] = globalNodes[index]; 
+
+		}
+
+	}
+
+	// get face 3 
+	else if (ind == 3) {
+
+		for (int i=0; i<p+1; i++) {
+
+			int index = p+i*(p+1); 
+			mNode[i] = globalNodes[index]; 
+
+		}
+
+	}
+
+	else cout << "face not defined" << endl; 
+
+	return mNode; 
+
+}
+
+void Element::fillMiddle(int &count) {
+
+	for (int i=0; i<N; i++) { 
+
+		if (globalNodes[i] == -1) {
+
+			globalNodes[i] = count; 
+
+			count++; 
+
+		}
+
+	}
+
+}
+
 double Element::evaluate(vector<double> &fin, double xi, double eta) {
 
 	double sum = 0; 
@@ -160,11 +387,35 @@ vector<double> Element::local2global(double xi, double eta) {
 
 }
 
-double Element::interpolate(vector<double> &fin, vector<double> &out) {
+vector<vector<double>> Element::interpolate(vector<double> &fin, vector<vector<double>> &xout,
+	vector<vector<double>> &yout) {
 
-	out = local2global(0, 0); 
+	vector<double> xmid(p), ymid(p); 
+	vector<vector<double>> fout; 
+	MatrixResize(fout, pow(p,2));
+	MatrixResize(xout, pow(p,2));
+	MatrixResize(yout, pow(p,2));
 
-	double fout = evaluate(fin, 0, 0); 
+	for (int i=0; i<p; i++) {
+
+		xmid[i] = (xloc[i+1] + xloc[i])/2; 
+		ymid[i] = (yloc[i+1] + yloc[i])/2; 
+
+	}
+
+	for (int i=0; i<p; i++) {
+
+		for (int j=0; j<p; j++) {
+
+			vector<double> glob = local2global(xmid[i], ymid[j]); 
+
+			fout[j][i] = evaluate(fin, xmid[i], ymid[j]); 
+			xout[j][i] = glob[0]; 
+			yout[j][i] = glob[1]; 
+
+		}
+
+	}
 
 	return fout; 
 

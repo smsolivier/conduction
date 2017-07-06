@@ -12,13 +12,18 @@ class Element {
 
 public:
 
-	Element(vector<double> &box, vector<int> &globalNodes, int p); 
+	Element(vector<double> &box, vector<int> &neighbors, int p); 
 	/*  box = global positions of quad 
 		globalNodes = global node numbers 
 		p = polynomial order 
 	*/
 
-	double interpolate(vector<double> &fin, vector<double> &xout); 
+	vector<vector<double>> interpolate(vector<double> &fin, vector<vector<double>> &xout, 
+		vector<vector<double>> &yout); 
+	void setFace(int i, vector<int> &nodes); 
+	void setFace(int ind, int &count); 
+	vector<int> getFace(int ind); 
+	void fillMiddle(int &count); 
 
 	vector<int> globalNodes; 
 
@@ -30,6 +35,8 @@ public:
 
 	vector<double> xglob; // global x locations
 	vector<double> yglob; // global y locations 
+
+	vector<int> neighbors; 
 
 private:
 

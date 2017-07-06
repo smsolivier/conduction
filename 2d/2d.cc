@@ -46,22 +46,22 @@ int main() {
 	// --- start program --- 
 
 
-	const int Nx = 20; 
-	const int Ny = 20; 
+	const int Nx = 2; 
+	const int Ny = 2; 
 	const int N = Nx * Ny; // number of elements 
-	const int Nt = 150; // number of time steps 
-	const double T0 = 0; 
+	const int Nt = 1; // number of time steps 
+	const double T0 = 1; 
 	const double kappax = 1;
 	const double kappay = 1;  
 
-	const double a = 1; 
+	const double a = 0; 
 	const double b = 1; 
 	const double c = 1; 
 	const double alpha = 1; 
 
-	int p = 2; 
+	const int p = 2; 
 
-	int nNodes = (Ny+1)*(Nx+1); 
+	int nNodes = (p*Ny+1)*(p*Nx+1); 
 
 	cout << "nNodes = " << nNodes << endl; 
 
@@ -77,13 +77,13 @@ int main() {
 		// return kappax*pow(M_PI/xb, 2)*sin(M_PI*x/xb)*sin(M_PI*y/yb) + 
 		// 	kappay*pow(M_PI/yb, 2)*sin(M_PI*x/xb)*sin(M_PI*y/yb); 
 
-		return 0; 
+		return 1; 
 	};
 
 	auto kappa = [xb, yb] (double x, double y) {
 
 		double val = 1.0; 
-		// if (x > 5*xb/10 && x < 8*xb/10 && y > 5*yb/10 && y < 8*yb/10) val = 10000; 
+		if (x > 5*xb/10 && x < 8*xb/10 && y > 5*yb/10 && y < 8*yb/10) val = 10000; 
 
 		return val; 
 	};
@@ -94,6 +94,8 @@ int main() {
 	vector<Element *> el(N); 
 
 	vector<int> bL, bR, bB, bT; 
+
+	int count = 0; 
 
 	Timer meshTime("Mesh Time = "); 
 	meshTime.start(); 
@@ -108,15 +110,27 @@ int main() {
 
 			for (int j=0; j<Ny; j++) {
 
-				int elNum = i*Ny+j; 
+				int elNum = i*Ny+j;
 
 				// vertices of quad 
 				vector<double> box = {x[i], x[i+1], y[j], y[j+1]}; 
 
-				// global node numbers 
-				vector<int> nodes = {(Ny+1)*i+j, (Ny+1)*(i+1)+j, (Ny+1)*i+j+1, (Ny+1)*(i+1)+j+1}; 
+				vector<int> neighbors(4); 
 
-				el[elNum] = new Element(box, nodes, p); 
+				// set boundary 
+				if (i == 0) neighbors[1] = -1; 
+				else neighbors[1] = i*Ny+j - Ny; 
+
+				if (j == 0) neighbors[0] = -1; 
+				else neighbors[0] = i*Ny+j - 1; 
+
+				if (i == Nx-1) neighbors[3] = -1; 
+				else neighbors[3] = i*Ny+j + Ny; 
+
+				if (j == Ny-1) neighbors[2] = -1;  
+				else neighbors[2] = i*Ny+j + 1; 
+
+				el[elNum] = new Element(box, neighbors, p); 
 
 			}
 
@@ -126,18 +140,96 @@ int main() {
 	// --- end omp parallel --- 
 	meshTime.stop(); 
 
+	Timer otime("order time = "); 
+	otime.start(); 
+	// assign global order 
+	int NN = pow(p+1, 2); 
+	count = 0; 
+	for (int i=0; i<N; i++) {
+
+		Element * mEl = el[i]; 
+
+		// if shared bottom 
+		if (mEl->neighbors[0] != -1) {
+
+			vector<int> nodes = el.at(mEl->neighbors[0])->getFace(2); 
+			mEl->setFace(0, nodes); 
+
+		}
+
+		// if left is shared 
+		if (mEl->neighbors[1] != -1) {
+
+			vector<int> nodes = el.at(mEl->neighbors[1])->getFace(3); 
+			mEl->setFace(1, nodes); 
+
+		}
+
+		// if bottom face is boundary 
+		if (mEl->neighbors[0] == -1) {
+
+			mEl->setFace(0, count); 
+
+		}
+
+		// if left face is boundary 
+		if (mEl->neighbors[1] == -1) {
+
+			mEl->setFace(1, count); 
+
+		}
+
+		mEl->fillMiddle(count); 
+
+	}
+	otime.stop(); 
+
 	// determine boundary 
+	for (int i=0; i<N; i++) {
 
-	for (int i=0; i<Nx+1; i++ ) {
+		Element mEl = *el[i]; 
 
-		for (int j=0; j<Ny+1; j++) {
+		if (mEl.neighbors[0] == -1) {
 
-			int elNum = i*(Ny+1) + j; 
+			vector<int> face = mEl.getFace(0); 
+			for (int j=0; j<face.size(); j++) {
 
-			if (i == 0) bL.push_back(elNum); 
-			if (j == 0) bB.push_back(elNum); 
-			if (i == Nx) bR.push_back(elNum); 
-			if (j == Ny) bT.push_back(elNum); 
+				bB.push_back(face[j]); 
+
+			}
+
+		}
+
+		if (mEl.neighbors[1] == -1) {
+
+			vector<int> face = mEl.getFace(1); 
+			for (int j=0; j<face.size(); j++) {
+
+				bL.push_back(face[j]); 
+
+			}
+
+		}
+
+		if (mEl.neighbors[2] == -1) {
+
+			vector<int> face = mEl.getFace(2); 
+			for (int j=0; j<face.size(); j++) {
+
+				bT.push_back(face[j]); 
+
+			}
+
+		}
+
+		if (mEl.neighbors[3] == -1) {
+
+			vector<int> face = mEl.getFace(3); 
+			for (int j=0; j<face.size(); j++) {
+
+				bR.push_back(face[j]); 
+
+			}
 
 		}
 
@@ -183,10 +275,10 @@ int main() {
 			Element mEl = *el[i]; // element i 
 
 			// row of local system 
-			for (int j=0; j<4; j++) {
+			for (int j=0; j<NN; j++) {
 
 				// column of local system 
-				for (int k=0; k<4; k++) {
+				for (int k=0; k<NN; k++) {
 
 					double tc = kappa(mEl.pts_global[k][0], mEl.pts_global[k][1]); 
 
@@ -240,9 +332,9 @@ int main() {
 
 		// print solution to file 
 		vector<vector<double>> sol, X, Y; 
-		MatrixResize(sol, Ny, Nx); 
-		MatrixResize(X, Ny, Nx); 
-		MatrixResize(Y, Ny, Nx); 
+		MatrixResize(sol, Ny*p, Nx*p); 
+		MatrixResize(X, Ny*p, Nx*p); 
+		MatrixResize(Y, Ny*p, Nx*p); 
 
 		for (int i=0; i<Nx; i++) {
 
@@ -250,24 +342,33 @@ int main() {
 
 				Element mEl = *el[i*Ny+j]; 
 
-				vector<double> fin(4); 
-				for (int k=0; k<4; k++) {
+				vector<double> fin(NN); 
+				for (int k=0; k<NN; k++) {
 
 					fin[k] = T[mEl.globalNodes[k]]; 
 
 				}
 
-				vector<double> out; 
-				double val = mEl.interpolate(fin, out); 
+				vector<vector<double>> xout, yout; 
+				vector<vector<double>> val = mEl.interpolate(fin, xout, yout); 
 
-				sol[j][i] = val; 
+				for (int k=0; k<val.size(); k++) {
 
-				X[j][i] = out[0]; 
-				Y[j][i] = out[1]; 
+					for (int l=0; l<val[k].size(); l++) {
+
+						sol.at(j*p+l).at(i*p+k) = val[l][k]; 
+						// X.at(j*p+l).at(i*p+k) = xout[l][k]; 
+						// Y.at(j*p+l).at(i*p+k) = yout[l][k]; 
+
+					}
+
+				}
 
 			}
 
 		}
+
+		printVector(sol); 
 
 		ofstream file; 
 		file.open("data/out"+to_string(l-1)); 
@@ -276,9 +377,9 @@ int main() {
 		ofstream gridY;  
 		gridX.open("data/X"+to_string(l-1)); 
 		gridY.open("data/Y"+to_string(l-1)); 
-		for (int i=0; i<Nx; i++) {
+		for (int i=0; i<sol.size(); i++) {
 
-			for (int j=0; j<Ny; j++) {
+			for (int j=0; j<sol[i].size(); j++) {
 
 				file << sol[j][i] << " "; 
 				gridX << X[j][i] << " "; 

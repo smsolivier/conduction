@@ -5,11 +5,27 @@ import matplotlib.pyplot as plt
 
 import os 
 
-N = 149
-
 datadir = 'data/'
+prefix = 'out_'
 
-for i in range(N):
+allfiles = os.listdir(datadir)
+
+files = [] 
+
+total = 0 
+
+for i in range(len(allfiles)):
+
+	if (allfiles[i].startswith(prefix)):
+
+		num = int(allfiles[i][len(prefix):])
+
+		if (num > total): 
+
+			total = num
+
+N = total + 1
+for i in range(149):
 
 	print(i/N, end='\r')
 
@@ -19,7 +35,7 @@ for i in range(N):
 
 	plt.figure()
 	plt.pcolor(X, Y, df, cmap='viridis')
-	# plt.pcolor(df)
+	# plt.pcolor(df, cmap='viridis')
 	plt.colorbar()
 	# plt.clim(0, 30)
 	plt.title(str(i))
