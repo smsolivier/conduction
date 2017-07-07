@@ -2,7 +2,6 @@
 
 #include "GaussQuad.hh"
 #include "helper.hh"
-#include "LinearAlgebra.hh"
 
 #include <cmath>
 #include <iostream>
@@ -14,7 +13,7 @@ Element::Element(vector<double> &box, vector<int> &neighbors, int p) :
 
 	globalNodes.resize(N, -1); 
 
-	int int_order = 10; 
+	int int_order = (p+1)/2 + 1; 
 
 	xglob = linspace(box[0], box[1], p+1); 
 	yglob = linspace(box[2], box[3], p+1); 
@@ -392,9 +391,9 @@ vector<vector<double>> Element::interpolate(vector<double> &fin, vector<vector<d
 
 	vector<double> xmid(p), ymid(p); 
 	vector<vector<double>> fout; 
-	MatrixResize(fout, pow(p,2));
-	MatrixResize(xout, pow(p,2));
-	MatrixResize(yout, pow(p,2));
+	MatrixResize(fout, p);
+	MatrixResize(xout, p);
+	MatrixResize(yout, p);
 
 	for (int i=0; i<p; i++) {
 

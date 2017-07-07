@@ -1,7 +1,7 @@
 #include "Basis.hh"
 #include "helper.hh"
-#include "LinearAlgebra.hh"
 #include "LinearSolver.hh"
+#include "VectorMath.hh"
 
 #include <iostream>
 #include <fstream>

@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import os 
 
 datadir = 'data/'
-prefix = 'out_'
+prefix = 'out'
 
 allfiles = os.listdir(datadir)
 
@@ -25,7 +25,7 @@ for i in range(len(allfiles)):
 			total = num
 
 N = total + 1
-for i in range(149):
+for i in range(N):
 
 	print(i/N, end='\r')
 
@@ -39,14 +39,14 @@ for i in range(149):
 	plt.colorbar()
 	# plt.clim(0, 30)
 	plt.title(str(i))
-	# plt.show()
-	plt.savefig('data/plot'+str(i)+'.png')
-	plt.close()
+	plt.show()
+	# plt.savefig('data/plot'+str(i)+'.png')
+	# plt.close()
 
-if os.path.isfile('out.mp4'):
+# if os.path.isfile('out.mp4'):
 
-	os.remove('out.mp4')
+	# os.remove('out.mp4')
 
-os.system('ffmpeg -f image2 -r 10 -i ' + datadir + 'plot%d.png -b 600k out.mp4')
+# os.system('ffmpeg -f image2 -r 10 -i ' + datadir + 'plot%d.png -b 600k out.mp4')
 
-os.system('totem out.mp4')
+# os.system('totem out.mp4')

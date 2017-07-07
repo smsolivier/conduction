@@ -46,11 +46,11 @@ int main() {
 	// --- start program --- 
 
 
-	const int Nx = 2; 
-	const int Ny = 2; 
+	const int Nx = 30; 
+	const int Ny = 30; 
 	const int N = Nx * Ny; // number of elements 
 	const int Nt = 1; // number of time steps 
-	const double T0 = 1; 
+	const double T0 = 0; 
 	const double kappax = 1;
 	const double kappay = 1;  
 
@@ -71,21 +71,21 @@ int main() {
 
 	vector<double> t = linspace(0, tend, Nt+1); 
 
-	auto Q = [kappax, kappay, a, b, c, xb, yb] (double x, double y) {
-
-		// conduction MMS
-		// return kappax*pow(M_PI/xb, 2)*sin(M_PI*x/xb)*sin(M_PI*y/yb) + 
-		// 	kappay*pow(M_PI/yb, 2)*sin(M_PI*x/xb)*sin(M_PI*y/yb); 
-
-		return 1; 
-	};
-
 	auto kappa = [xb, yb] (double x, double y) {
 
 		double val = 1.0; 
-		if (x > 5*xb/10 && x < 8*xb/10 && y > 5*yb/10 && y < 8*yb/10) val = 10000; 
+		// if (x > 5*xb/10 && x < 8*xb/10 && y > 5*yb/10 && y < 8*yb/10) val = 100; 
 
 		return val; 
+	};
+
+	auto Q = [kappa, a, b, c, xb, yb] (double x, double y) {
+
+		// conduction MMS
+		return kappa(x,y)*pow(M_PI/xb, 2)*sin(M_PI*x/xb)*sin(M_PI*y/yb) + 
+			kappa(x,y)*pow(M_PI/yb, 2)*sin(M_PI*x/xb)*sin(M_PI*y/yb); 
+
+		// return 1; 
 	};
 
 	vector<double> x = linspace(0, xb, Nx+1);
@@ -105,7 +105,7 @@ int main() {
 	#pragma omp parallel num_threads(OMP_NUM_THREADS)
 	{
 
-		#pragma omp for schedule(dynamic, 1) nowait
+		#pragma omp for schedule(static) nowait
 		for (int i=0; i<Nx; i++ ) {
 
 			for (int j=0; j<Ny; j++) {
@@ -305,25 +305,25 @@ int main() {
 
 		// boundary conditions 
 		applyBC(A, rhs, bL, T0); 
-		// applyBC(A, rhs, bT, T0); 
+		applyBC(A, rhs, bT, T0); 
 		applyBC(A, rhs, bB, T0); 
-		// applyBC(A, rhs, bR, T0); 
+		applyBC(A, rhs, bR, T0); 
 
-		for (int i=0; i<bT.size(); i++) {
+		// for (int i=0; i<bT.size(); i++) {
 
-			int ind = bT[i]; 
+		// 	int ind = bT[i]; 
 
-			rhs[ind] += 50; 
+		// 	rhs[ind] += 50; 
 
-		}
+		// }
 
-		for (int i=0; i<bR.size(); i++) {
+		// for (int i=0; i<bR.size(); i++) {
 
-			int ind = bR[i]; 
+		// 	int ind = bR[i]; 
 
-			rhs[ind] += 50; 
+		// 	rhs[ind] += 50; 
 
-		}
+		// }
 
 		// solve system 
 		int status = gauss_elim(A.size(), A, T, rhs); 
@@ -332,9 +332,10 @@ int main() {
 
 		// print solution to file 
 		vector<vector<double>> sol, X, Y; 
-		MatrixResize(sol, Ny*p, Nx*p); 
-		MatrixResize(X, Ny*p, Nx*p); 
-		MatrixResize(Y, Ny*p, Nx*p); 
+		int size = Ny*p; 
+		MatrixResize(sol, size, size); 
+		MatrixResize(X, size, size); 
+		MatrixResize(Y, size, size); 
 
 		for (int i=0; i<Nx; i++) {
 
@@ -357,8 +358,8 @@ int main() {
 					for (int l=0; l<val[k].size(); l++) {
 
 						sol.at(j*p+l).at(i*p+k) = val[l][k]; 
-						// X.at(j*p+l).at(i*p+k) = xout[l][k]; 
-						// Y.at(j*p+l).at(i*p+k) = yout[l][k]; 
+						X.at(j*p+l).at(i*p+k) = xout[l][k]; 
+						Y.at(j*p+l).at(i*p+k) = yout[l][k]; 
 
 					}
 
@@ -367,8 +368,6 @@ int main() {
 			}
 
 		}
-
-		printVector(sol); 
 
 		ofstream file; 
 		file.open("data/out"+to_string(l-1)); 
