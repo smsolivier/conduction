@@ -13,7 +13,8 @@ Element::Element(vector<double> &box, vector<int> &neighbors, int p) :
 
 	globalNodes.resize(N, -1); 
 
-	int int_order = (p+1)/2 + 1; 
+	// int int_order = (p+1)/2 + 1; 
+	int int_order = 10; 
 
 	xglob = linspace(box[0], box[1], p+1); 
 	yglob = linspace(box[2], box[3], p+1); 
@@ -418,4 +419,18 @@ vector<vector<double>> Element::interpolate(vector<double> &fin, vector<vector<d
 
 	return fout; 
 
+}
+
+double Element::interpolateSingle(vector<double> &fin, double &xout, double &yout) {
+
+	double val = evaluate(fin, 0, 0); 
+
+	vector<double> glob = local2global(0, 0); 
+
+	xout = glob[0]; 
+
+	yout = glob[1]; 
+
+	return val; 
+	
 }

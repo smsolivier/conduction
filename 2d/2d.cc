@@ -1,3 +1,4 @@
+#include <omp.h>
 #include "Element.hh"
 #include "helper.hh"
 #include "Timer.hh"
@@ -46,20 +47,18 @@ int main() {
 	// --- start program --- 
 
 
-	const int Nx = 30; 
-	const int Ny = 30; 
+	const int Nx = 20; 
+	const int Ny = 20; 
 	const int N = Nx * Ny; // number of elements 
 	const int Nt = 1; // number of time steps 
-	const double T0 = 0; 
-	const double kappax = 1;
-	const double kappay = 1;  
+	const double T0 = 0;  
 
 	const double a = 0; 
 	const double b = 1; 
 	const double c = 1; 
 	const double alpha = 1; 
 
-	const int p = 2; 
+	const int p = 3; 
 
 	int nNodes = (p*Ny+1)*(p*Nx+1); 
 
@@ -67,14 +66,14 @@ int main() {
 
 	double xb = .1; 
 	double yb = .1; 
-	double tend = .005; 
+	double tend = .0025; 
 
 	vector<double> t = linspace(0, tend, Nt+1); 
 
 	auto kappa = [xb, yb] (double x, double y) {
 
-		double val = 1.0; 
-		// if (x > 5*xb/10 && x < 8*xb/10 && y > 5*yb/10 && y < 8*yb/10) val = 100; 
+		double val = 1; 
+		// if (x > 5*xb/10 && x < 8*xb/10 && y > 5*yb/10 && y < 8*yb/10) val = 1; 
 
 		return val; 
 	};
@@ -85,7 +84,8 @@ int main() {
 		return kappa(x,y)*pow(M_PI/xb, 2)*sin(M_PI*x/xb)*sin(M_PI*y/yb) + 
 			kappa(x,y)*pow(M_PI/yb, 2)*sin(M_PI*x/xb)*sin(M_PI*y/yb); 
 
-		// return 1; 
+		// return 0; 
+
 	};
 
 	vector<double> x = linspace(0, xb, Nx+1);
@@ -102,8 +102,15 @@ int main() {
 
 	// build mesh of elements 
 	// --- start omp parallel --- 
-	#pragma omp parallel num_threads(OMP_NUM_THREADS)
+	#pragma omp parallel
 	{
+
+		#pragma omp master 
+		{
+
+			cout << "Building mesh with " << omp_get_num_threads() << " threads" << endl; 
+
+		}
 
 		#pragma omp for schedule(static) nowait
 		for (int i=0; i<Nx; i++ ) {
@@ -332,7 +339,7 @@ int main() {
 
 		// print solution to file 
 		vector<vector<double>> sol, X, Y; 
-		int size = Ny*p; 
+		int size = Ny; 
 		MatrixResize(sol, size, size); 
 		MatrixResize(X, size, size); 
 		MatrixResize(Y, size, size); 
@@ -350,20 +357,28 @@ int main() {
 
 				}
 
-				vector<vector<double>> xout, yout; 
-				vector<vector<double>> val = mEl.interpolate(fin, xout, yout); 
+				// vector<vector<double>> xout, yout; 
+				double xout, yout; 
+				// vector<vector<double>> val = mEl.interpolate(fin, xout, yout); 
+				double val = mEl.interpolateSingle(fin, xout, yout); 
 
-				for (int k=0; k<val.size(); k++) {
+				sol[j][i] = val; 
+				X[j][i] = xout; 
+				Y[j][i] = yout; 
 
-					for (int l=0; l<val[k].size(); l++) {
+				// for (int k=0; k<val.size(); k++) {
 
-						sol.at(j*p+l).at(i*p+k) = val[l][k]; 
-						X.at(j*p+l).at(i*p+k) = xout[l][k]; 
-						Y.at(j*p+l).at(i*p+k) = yout[l][k]; 
+				// 	for (int l=0; l<val[k].size(); l++) {
 
-					}
+				// 		sol.at(j*p+l).at(i*p+k) = val[l][k]; 
+				// 		X.at(j*p+l).at(i*p+k) = xout[l][k]; 
+				// 		Y.at(j*p+l).at(i*p+k) = yout[l][k]; 
 
-				}
+				// 	}
+
+				// }
+
+
 
 			}
 

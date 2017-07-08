@@ -3,6 +3,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+from matplotlib.colors import LogNorm
 import os 
 
 datadir = 'data/'
@@ -13,6 +14,8 @@ allfiles = os.listdir(datadir)
 files = [] 
 
 total = 0 
+
+fmms = lambda x, y: np.sin(np.pi*x/.1) * np.sin(np.pi*y/.1)
 
 for i in range(len(allfiles)):
 
@@ -34,10 +37,9 @@ for i in range(N):
 	df = np.loadtxt('data/out'+str(i))
 
 	plt.figure()
-	plt.pcolor(X, Y, df, cmap='viridis')
-	# plt.pcolor(df, cmap='viridis')
+	# plt.pcolor(X, Y, df, cmap='viridis')
+	plt.pcolor(X, Y, np.fabs(df - fmms(X, Y)), norm=LogNorm(), cmap='viridis')
 	plt.colorbar()
-	# plt.clim(0, 30)
 	plt.title(str(i))
 	plt.show()
 	# plt.savefig('data/plot'+str(i)+'.png')

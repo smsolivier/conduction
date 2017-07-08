@@ -20,6 +20,7 @@ public:
 
 	vector<vector<double>> interpolate(vector<double> &fin, vector<vector<double>> &xout, 
 		vector<vector<double>> &yout); 
+	double interpolateSingle(vector<double> &fin, double &xout, double &yout); 
 	void setFace(int i, vector<int> &nodes); 
 	void setFace(int ind, int &count); 
 	vector<int> getFace(int ind); 
