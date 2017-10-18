@@ -2,7 +2,7 @@ CXX=g++
 CFLAGS = -std=c++14 \
 	-fopenmp -g
 
-LIBLOC = /home/sam/cpp_library
+LIBLOC = ./cpp_library
 LIBS = MyLib
 LIBS := $(addprefix -l, $(LIBS))
 CLIBS = -I $(LIBLOC) -L $(LIBLOC) $(LIBS)
