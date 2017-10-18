@@ -2,37 +2,47 @@
 #include "helper.hh"
 #include "Timer.hh"
 
+#include "SparseMatrix.hh"
+#include "JacobiSolver.hh"
+
 #include <vector>
 #include <iostream>
 #include <fstream>
 #include <cmath>
+#include <array>
 
 using namespace std; 
 
 #define OMP_NUM_THREADS 4
 
-void applyBC(vector<vector<double>> &A, vector<double> &rhs, vector<int> &loc, double val) {
+void applyBC(SparseMatrix &A, vector<double> &rhs, vector<int> &loc, double val) {
 
 	for (int i=0; i<loc.size(); i++) {
 
 		int ind = loc[i]; 
 
 		// remove equation 
-		for (int j=0; j<A.size(); j++) {
+		for (int j=0; j<A.M(); j++) {
 
-			A[ind][j] = 0; 
+			array<int, 2> loc = {ind, j}; 
+
+			A[loc] = 0; 
 
 		}
 
 		// subtract first column 
-		for (int j=0; j<A.size(); j++) {
+		for (int j=0; j<A.N(); j++) {
 
-			rhs[j] -= val*A[j][ind];
-			A[j][ind] = 0; // remove column 
+			array<int, 2> loc = {j, ind}; 
+
+			rhs[j] -= val*A[loc];
+			A[loc] = 0; // remove column 
 
 		}
 
-		A[ind][ind] = 1; 
+		array<int, 2> loc = {ind, ind}; 
+
+		A[loc] = 1; 
 		rhs[ind] = val; 
 
 	}
@@ -256,6 +266,11 @@ int main() {
 
 	// }
 
+	// create solver 
+	JacobiSolver jsolve; 
+	double tol = 1e-6; 
+	int maxiter = 10000; 
+
 	// loop through time 
 	for (int l=1; l<t.size(); l++) {
 
@@ -265,8 +280,9 @@ int main() {
 		double dt = t[l] - t[l-1]; 
 
 		// global system 
-		vector<vector<double>> A; 
-		MatrixResize(A, nNodes); 
+		// vector<vector<double>> A; 
+		// MatrixResize(A, nNodes); 
+		SparseMatrix A(nNodes, nNodes); 
 		vector<double> rhs(nNodes); 
 
 		// loop through elements 
@@ -285,9 +301,15 @@ int main() {
 					int row = mEl.globalNodes[j]; 
 					int col = mEl.globalNodes[k]; 
 
-					A[row][col] += a/dt*mEl.A[j][k]; 
-					A[row][col] += alpha*tc*mEl.B[j][k]; 
-					A[row][col] += alpha*tc*mEl.C[j][k]; 
+					array<int, 2> index = {row, col}; 
+
+					// A[row][col] += a/dt*mEl.A[j][k]; 
+					// A[row][col] += alpha*tc*mEl.B[j][k]; 
+					// A[row][col] += alpha*tc*mEl.C[j][k]; 
+
+					A[index] += a/dt*mEl.A[j][k]; 
+					A[index] += alpha*tc*mEl.B[j][k]; 
+					A[index] += alpha*tc*mEl.C[j][k]; 
 
 					// A[row][col] += a*mEl.Z[j][k];
 					// A[row][col] += b*mEl.W[j][k]; 
@@ -326,9 +348,10 @@ int main() {
 		// }
 
 		// solve system 
-		int status = gauss_elim(A.size(), A, T, rhs); 
+		// int status = gauss_elim(A.size(), A, T, rhs); 
 
-		if (status != 0) cout << "linear solver problem" << endl; 
+		// if (status != 0) cout << "linear solver problem" << endl; 
+		jsolve.solve(T, A, rhs, tol, maxiter); 
 
 		// print solution to file 
 		vector<vector<double>> sol, X, Y; 

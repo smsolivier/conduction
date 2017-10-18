@@ -1,8 +1,8 @@
 CXX=g++
 CFLAGS = -std=c++14 \
-	-fopenmp 
+	-fopenmp -g
 
-LIBLOC = /home/sam/cpp
+LIBLOC = /home/sam/cpp_library
 LIBS = MyLib
 LIBS := $(addprefix -l, $(LIBS))
 CLIBS = -I $(LIBLOC) -L $(LIBLOC) $(LIBS)
@@ -10,9 +10,7 @@ CLIBS = -I $(LIBLOC) -L $(LIBLOC) $(LIBS)
 
 RM = rm -f 
 
-SRC = 2d.cc \
-	Element.cc \
-	Basis.cc
+SRC = $(wildcard src/*.cc)
 
 OBJ = $(subst .cc,.o,$(SRC))
 
@@ -20,11 +18,11 @@ OBJDIR = obj/
 
 DATADIR = data/
 
-OBJ := $(addprefix $(OBJDIR), $(OBJ))
+OBJ := $(addprefix $(OBJDIR), $(notdir $(OBJ)))
 
 exe = x
 
-all : $(OBJDIR) $(DATADIR) $(exe) 
+all : $(OBJDIR) $(DATADIR) $(exe)
 
 $(OBJDIR) :
 	mkdir $(OBJDIR) 
@@ -32,14 +30,20 @@ $(OBJDIR) :
 $(DATADIR) :
 	mkdir $(DATADIR)
 
-$(exe) : $(OBJ) 
+$(exe) : $(OBJ)
 	$(CXX) $(CFLAGS) -o $(exe) $(OBJ) $(CLIBS)
 
-$(OBJDIR)%.o : %.cc
+# $(OBJDIR)%.o : %.cc
+# 	$(CXX) $(CFLAGS) -c $< -o $@ $(CLIBS)
+
+$(OBJDIR)%.o:src/%.cc Makefile
 	$(CXX) $(CFLAGS) -c $< -o $@ $(CLIBS)
+	$(CXX) -MM $(CFLAGS) $< $(CLIBS) > src/$*.d
 
 .PHONY : clean 
 clean : 
 	$(RM) -r $(OBJDIR) 
 	$(RM) -r $(DATADIR)
 	$(RM) $(exe) 
+
+-include $(OBJ:.o=.d)
