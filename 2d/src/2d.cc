@@ -13,7 +13,7 @@
 
 using namespace std; 
 
-#define OMP_NUM_THREADS 4
+#define OMP_NUM_THREADS 16
 
 void applyBC(SparseMatrix &A, vector<double> &rhs, vector<int> &loc, double val) {
 

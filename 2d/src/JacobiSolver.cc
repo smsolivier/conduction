@@ -80,7 +80,7 @@ double JacobiSolver::solve(
 	int a_iter) 
 {
 
-	double alpha = .85; 
+	double alpha = .9; 
 
 	// find largest diagonal 
 	double max_diag = 0; 
@@ -112,7 +112,10 @@ double JacobiSolver::solve(
 
 		vector<double> resid = (a_A*a_phi) - a_rhs; 
 
-		R = max(resid)/max_rhs; 
+		R = max(resid)/max_rhs;
+
+		cout << R << "  " << i << " \r";
+		cout.flush(); 
 
 		if (R < a_tolerance) break; 
 

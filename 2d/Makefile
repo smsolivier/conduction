@@ -44,6 +44,7 @@ $(OBJDIR)%.o:src/%.cc Makefile
 clean : 
 	$(RM) -r $(OBJDIR) 
 	$(RM) -r $(DATADIR)
-	$(RM) $(exe) 
+	$(RM) $(exe)
+	$(RM) src/*.d
 
 -include $(OBJ:.o=.d)
