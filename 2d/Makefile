@@ -35,10 +35,11 @@ DEPS = $(patsubst $(OBJDIR)/%.o, $(DEPDIR)/%.d, $(OBJ))
 # name of output executable 
 exe = x
 
-# create executable 
 all : $(exe)
 
-$(exe) : $(OBJ)
+# create executable 
+# depends on cpp_library and object files 
+$(exe) : $(LIBLOC)/libMyLib.a $(OBJ)  
 	mkdir -p $(DATADIR)
 	$(CXX) $(CFLAGS) $(OBJ) $(CLIBS) -o $(exe)
 
@@ -49,12 +50,18 @@ $(OBJDIR)/%.o : %.cc Makefile
 	mkdir -p $(DEPDIR)
 	$(CXX) -MM $(CFLAGS) $< $(CLIBS) | sed '1s/^/$(OBJDIR)\//' > $*.d; mv $*.d $(DEPDIR)
 
+# run the make file for the library 
+$(LIBLOC)/libMyLib.a : $(wildcard $(LIBLOC)/*.cc $(LIBLOC)/*.hh) 
+	cd $(LIBLOC); make clean; make CXX=$(CXX)
+
+# clean up 
 .PHONY : clean 
 clean : 
 	rm -f -r $(OBJDIR) 
 	rm -f -r $(DATADIR)
 	rm -f $(exe)
 	rm -f -r $(OBJDIR) $(DEPDIR)
+	cd $(LIBLOC); make clean 
 
 listsrc :
 	@echo $(SRCFILES)
