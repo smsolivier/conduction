@@ -59,7 +59,8 @@ int main() {
 	const double c = 1; 
 	const double alpha = 1; 
 
-	const int p = 2; 
+	// finite element order 
+	const int p = 1; 
 
 	int nNodes = (p*Ny+1)*(p*Nx+1); 
 
