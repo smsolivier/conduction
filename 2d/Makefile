@@ -1,50 +1,64 @@
 CXX=g++
-CFLAGS = -std=c++14 \
-	-fopenmp -g
+CFLAGS = -std=c++14 -fopenmp 
 
+# source file locations 
+SRC = src
+SPMAT = spmat
+
+# include from source locations 
+CFLAGS += -I$(SRC) -I$(SPMAT)
+
+# cpp library 
 LIBLOC = ./cpp_library
 LIBS = MyLib
 LIBS := $(addprefix -l, $(LIBS))
 CLIBS = -I $(LIBLOC) -L $(LIBLOC) $(LIBS)
 
+# look for .cc files in these folders 
+VPATH = src spmat
 
-RM = rm -f 
+# all .cc files 
+SRCFILES = $(notdir $(wildcard $(SRC)/*.cc $(SPMAT)/*.cc))
 
-SRC = $(wildcard src/*.cc)
+# where to put object and dependency files 
+OBJDIR = obj
+DEPDIR = dep
 
-OBJ = $(subst .cc,.o,$(SRC))
+# convert .cc -> objdir/.o 
+OBJ = $(patsubst %.cc,$(OBJDIR)/%.o,$(SRCFILES))
 
-OBJDIR = obj/
+# output directory 
+DATADIR = data
 
-DATADIR = data/
+# convert .o -> depdir/.d 
+DEPS = $(patsubst $(OBJDIR)/%.o, $(DEPDIR)/%.d, $(OBJ))
 
-OBJ := $(addprefix $(OBJDIR), $(notdir $(OBJ)))
-
+# name of output executable 
 exe = x
 
-all : $(OBJDIR) $(DATADIR) $(exe)
-
-$(OBJDIR) :
-	mkdir $(OBJDIR) 
-
-$(DATADIR) :
-	mkdir $(DATADIR)
+# create executable 
+all : $(exe)
 
 $(exe) : $(OBJ)
-	$(CXX) $(CFLAGS) -o $(exe) $(OBJ) $(CLIBS)
+	mkdir -p $(DATADIR)
+	$(CXX) $(CFLAGS) $(OBJ) $(CLIBS) -o $(exe)
 
-# $(OBJDIR)%.o : %.cc
-# 	$(CXX) $(CFLAGS) -c $< -o $@ $(CLIBS)
-
-$(OBJDIR)%.o:src/%.cc Makefile
+# build all object and dependency files (uses VPATH to find .cc files)
+$(OBJDIR)/%.o : %.cc Makefile
+	mkdir -p $(OBJDIR)
 	$(CXX) $(CFLAGS) -c $< -o $@ $(CLIBS)
-	$(CXX) -MM $(CFLAGS) $< $(CLIBS) > src/$*.d
+	mkdir -p $(DEPDIR)
+	$(CXX) -MM $(CFLAGS) $< $(CLIBS) | sed '1s/^/$(OBJDIR)\//' > $*.d; mv $*.d $(DEPDIR)
 
 .PHONY : clean 
 clean : 
-	$(RM) -r $(OBJDIR) 
-	$(RM) -r $(DATADIR)
-	$(RM) $(exe)
-	$(RM) src/*.d
+	rm -f -r $(OBJDIR) 
+	rm -f -r $(DATADIR)
+	rm -f $(exe)
+	rm -f -r $(OBJDIR) $(DEPDIR)
 
--include $(OBJ:.o=.d)
+listsrc :
+	@echo $(SRCFILES)
+	
+# add in additional dependcy information 
+-include $(DEPS)
