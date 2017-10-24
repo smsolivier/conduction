@@ -2,3 +2,4 @@ obj/*
 data/*
 *.mp4
 x
+dep/*
