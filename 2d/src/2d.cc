@@ -9,6 +9,7 @@
 
 using namespace std; 
 
+// number of openmp threads to use 
 #define OMP_NUM_THREADS 4
 
 void applyBC(vector<vector<double>> &A, vector<double> &rhs, vector<int> &loc, double val) {
@@ -46,57 +47,60 @@ int main() {
 	// --- start program --- 
 
 
-	const int Nx = 30; 
-	const int Ny = 30; 
+	const int Nx = 30; // number of elements in x 
+	const int Ny = 30; // number of elements in y 
 	const int N = Nx * Ny; // number of elements 
-	const int Nt = 1; // number of time steps 
-	const double T0 = 0; 
-	const double kappax = 1;
-	const double kappay = 1;  
+	const int Nt = 100; // number of time steps 
+	const double T0 = 0; // initial temperature 
+	const double kappax = 1; // thermal conductivity in x 
+	const double kappay = 1; // thermal conductivity in y 
 
-	const double a = 0; 
-	const double b = 1; 
-	const double c = 1; 
-	const double alpha = 1; 
+	const double a = 1; // coefficient in from of time derivative 
+	const double b = 1; // x derivative
+	const double c = 1; // y derivative
+	const double alpha = 1; // 0: forward euler, .5: trapezoid, 1: backward euler
 
 	// finite element order 
 	const int p = 1; 
 
+	// total number of nodes 
 	int nNodes = (p*Ny+1)*(p*Nx+1); 
 
 	cout << "nNodes = " << nNodes << endl; 
 
-	double xb = .1; 
-	double yb = .1; 
-	double tend = .005; 
+	double xb = .1; // length in x 
+	double yb = .1; // length in y 
+	double tend = .001; // end time 
 
-	vector<double> t = linspace(0, tend, Nt+1); 
+	vector<double> t = linspace(0, tend, Nt+1); // vector of time points 
 
+	// thermal conductivity function 
 	auto kappa = [xb, yb] (double x, double y) {
 
 		double val = 1.0; 
-		// if (x > 5*xb/10 && x < 8*xb/10 && y > 5*yb/10 && y < 8*yb/10) val = 100; 
+		if (x > 5*xb/10 && x < 8*xb/10 && y > 5*yb/10 && y < 8*yb/10) val = 100; 
 
 		return val; 
 	};
 
+	// source function 
 	auto Q = [kappa, a, b, c, xb, yb] (double x, double y) {
 
 		// conduction MMS
-		return kappa(x,y)*pow(M_PI/xb, 2)*sin(M_PI*x/xb)*sin(M_PI*y/yb) + 
-			kappa(x,y)*pow(M_PI/yb, 2)*sin(M_PI*x/xb)*sin(M_PI*y/yb); 
+		// return kappa(x,y)*pow(M_PI/xb, 2)*sin(M_PI*x/xb)*sin(M_PI*y/yb) + 
+		// 	kappa(x,y)*pow(M_PI/yb, 2)*sin(M_PI*x/xb)*sin(M_PI*y/yb); 
 
 		// return 1; 
+		return 0; 
 	};
 
-	vector<double> x = linspace(0, xb, Nx+1);
-	vector<double> y = linspace(0, yb, Ny+1);  
+	vector<double> x = linspace(0, xb, Nx+1); // vector of x points 
+	vector<double> y = linspace(0, yb, Ny+1); // vector of y points 
 
-	vector<Element *> el(N); 
+	vector<Element *> el(N); // store all elements 
 
-	vector<int> bL, bR, bB, bT; 
-
-	int count = 0; 
+	// store which elements are on top, left, right, bottom boundary 
+	vector<int> bL, bR, bB, bT;
 
 	Timer meshTime("Mesh Time = "); 
 	meshTime.start(); 
@@ -116,6 +120,7 @@ int main() {
 				// vertices of quad 
 				vector<double> box = {x[i], x[i+1], y[j], y[j+1]}; 
 
+				// store node number on left, bottom, right, top boundary 
 				vector<int> neighbors(4); 
 
 				// set boundary 
@@ -131,6 +136,7 @@ int main() {
 				if (j == Ny-1) neighbors[2] = -1;  
 				else neighbors[2] = i*Ny+j + 1; 
 
+				// build element 
 				el[elNum] = new Element(box, neighbors, p); 
 
 			}
@@ -145,7 +151,7 @@ int main() {
 	otime.start(); 
 	// assign global order 
 	int NN = pow(p+1, 2); 
-	count = 0; 
+	int count = 0; 
 	for (int i=0; i<N; i++) {
 
 		Element * mEl = el[i]; 
@@ -180,6 +186,7 @@ int main() {
 
 		}
 
+		// increment the rest of the points 
 		mEl->fillMiddle(count); 
 
 	}
@@ -239,7 +246,7 @@ int main() {
 	// store solution 
 	vector<double> T(nNodes); 
 
-	// set initial conditions 
+	// set initial temperature
 	// for (int i=0; i<N; i++) {
 
 	// 	Element mEl = *el[i]; 
@@ -260,9 +267,11 @@ int main() {
 	// loop through time 
 	for (int l=1; l<t.size(); l++) {
 
+		// output time step information 
 		cout << double(l)/t.size() << " \r";   
 		cout.flush(); 
 
+		// time step size 
 		double dt = t[l] - t[l-1]; 
 
 		// global system 
@@ -281,19 +290,18 @@ int main() {
 				// column of local system 
 				for (int k=0; k<NN; k++) {
 
+					// thermal conductivity at each node 
 					double tc = kappa(mEl.pts_global[k][0], mEl.pts_global[k][1]); 
 
+					// get global node number of the nodes 
 					int row = mEl.globalNodes[j]; 
 					int col = mEl.globalNodes[k]; 
 
-					A[row][col] += a/dt*mEl.A[j][k]; 
-					A[row][col] += alpha*tc*mEl.B[j][k]; 
-					A[row][col] += alpha*tc*mEl.C[j][k]; 
+					A[row][col] += a/dt*mEl.A[j][k]; // time derivative term 
+					A[row][col] += b*alpha*tc*mEl.B[j][k]; // x derivative 
+					A[row][col] += c*alpha*tc*mEl.C[j][k]; // y derivative 
 
-					// A[row][col] += a*mEl.Z[j][k];
-					// A[row][col] += b*mEl.W[j][k]; 
-					// A[row][col] += c*mEl.X[j][k]; 
-
+					// update rhs 
 					rhs[row] += (a/dt*mEl.A[j][k] - 
 						(1-alpha)*(tc*mEl.B[j][k] + tc*mEl.C[j][k]))*T[row]; 
 					rhs[row] += Q(mEl.pts_global[k][0], mEl.pts_global[k][1])*mEl.A[j][k]; 
@@ -304,27 +312,29 @@ int main() {
 
 		}
 
-		// boundary conditions 
-		applyBC(A, rhs, bL, T0); 
-		applyBC(A, rhs, bT, T0); 
-		applyBC(A, rhs, bB, T0); 
-		applyBC(A, rhs, bR, T0); 
+		// dirichlet boundary conditions 
+		applyBC(A, rhs, bL, T0); // left boundary 
+		// applyBC(A, rhs, bT, T0); // top boundary 
+		applyBC(A, rhs, bB, T0); // bottom boundary 
+		// applyBC(A, rhs, bR, T0); // right boundary 
 
-		// for (int i=0; i<bT.size(); i++) {
+		// flux boundary on top 
+		for (int i=0; i<bT.size(); i++) {
 
-		// 	int ind = bT[i]; 
+			int ind = bT[i]; 
 
-		// 	rhs[ind] += 50; 
+			rhs[ind] += 50; // arbitrary flux, non physical units 
 
-		// }
+		}
 
-		// for (int i=0; i<bR.size(); i++) {
+		// flux boundary on right 
+		for (int i=0; i<bR.size(); i++) {
 
-		// 	int ind = bR[i]; 
+			int ind = bR[i]; 
 
-		// 	rhs[ind] += 50; 
+			rhs[ind] += 50; // arbitrary flux, non physical units 
 
-		// }
+		}
 
 		// solve system 
 		int status = gauss_elim(A.size(), A, T, rhs); 
@@ -338,6 +348,8 @@ int main() {
 		MatrixResize(X, size, size); 
 		MatrixResize(Y, size, size); 
 
+		// get solution from element objects 
+		// interpolates between nodes 
 		for (int i=0; i<Nx; i++) {
 
 			for (int j=0; j<Ny; j++) {
@@ -370,6 +382,7 @@ int main() {
 
 		}
 
+		// write the solution to file 
 		ofstream file; 
 		file.open("data/out"+to_string(l-1)); 
 
